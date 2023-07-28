@@ -455,6 +455,7 @@ export async function handleGPTCompletion(
                     done: true,
                     value: undefined,
                 };
+                console.log(tokensReceived);
                 if (done) {
                     return outputDiscordMessage();
                 }
@@ -462,10 +463,11 @@ export async function handleGPTCompletion(
                 // Massage and parse the chunk of data
                 const lines = decoder.decode(value).split(/\n+/);
 
-                interface GptPartialResponse {
-                    finished: boolean;
-                    messageChunk: string;
-                };
+
+                // interface GptPartialResponse {
+                //     finished: boolean;
+                //     messageChunk: string;
+                // };
 
                 // for (const parsedLine of parsedLines) {
                 //     totalOutput += parsedLine;
@@ -475,77 +477,72 @@ export async function handleGPTCompletion(
                 //     }
                 // }
 
-            function processLine(line: string): GptPartialResponse {
+            function processLine(line: string): { content: string, finished: boolean } {
                 const parsedLines = line
                     .split(/\n+/)
                     .map((line) => line.replace(/^data: /, "").trim()) // Remove the "data: " prefix
                     .filter((line) => line !== "" && line !== "[DONE]") // Remove empty lines and "[DONE]"
                     .map((line) => JSON.parse(line)); // Parse the JSON string
 
-                for (let parsedLine of parsedLines) {
-                    const { choices } = parsedLine 
-                    const { delta, finish_reason } = choices;
-                    const { content } = delta;
-                    console.log(content);
-                    totalOutput += content;
-                    return {
-                        finished: finish_reason !== null,
-                        messageChunk: content,
-                    };
-                }
+                const { choices } = parsedLines[0];
+                const { delta, finish_reason } = choices[0];
+                const { content } = delta;
+
+                return {
+                    content,
+                    finished: finish_reason !== null,
+                };
             }
 
-                for (let line of lines) {
-                    console.log(line);
-                    const parsedLines: GptPartialResponse = processLine(line);
-                    // console.log(parsedLines);
-                }
+           for (let line of lines) {
+            processLine(line);
+           } 
 
-                for (let line of lines) {
-                    const parsedLines = line
-                        .split(/\n+/)
-                        .map((line) => line.replace(/^data: /, "").trim()) // Remove the "data: " prefix
-                        .filter((line) => line !== "" && line !== "[DONE]") // Remove empty lines and "[DONE]"
-                        .map((line) => JSON.parse(line)); // Parse the JSON string
+                // for (let line of lines) {
+                //     const parsedLines = line
+                //         .split(/\n+/)
+                //         .map((line) => line.replace(/^data: /, "").trim()) // Remove the "data: " prefix
+                //         .filter((line) => line !== "" && line !== "[DONE]") // Remove empty lines and "[DONE]"
+                //         .map((line) => JSON.parse(line)); // Parse the JSON string
 
-                    for (const parsedLine of parsedLines) {
-                        const { choices } = parsedLine;
-                        const { delta, finish_reason } = choices[0];
-                        const { content } = delta;
-                        totalOutput += content;
-                        if (!finish_reason && content !== "") {
-                            if (output.length >= 1950) {
-                                totalOutput += content;
-                                await msgRef?.edit(output);
-                                msgRef = await msg.reply(content);
-                                messages.push({
-                                    role: "assistant",
-                                    content: totalOutput,
-                                });
-                                output = content;
-                                tokensReceived = 0;
-                            } else {
-                                output += content;
-                            }
-                            if (
-                                !haveSentMessage &&
-                                tokensReceived >= BEFORE_FIRST_POST
-                            ) {
-                                msgRef = await msg.reply(output);
-                                haveSentMessage = true;
-                                tokensReceived = 0;
-                            }
-                            if (
-                                haveSentMessage &&
-                                tokensReceived >= BEFORE_EDIT
-                            ) {
-                                msgRef?.edit(output);
-                                tokensReceived = 0;
-                            }
-                        }
-                        tokensReceived++;
-                    }
-                }
+                //     for (const parsedLine of parsedLines) {
+                //         const { choices } = parsedLine;
+                //         const { delta, finish_reason } = choices[0];
+                //         const { content } = delta;
+                //         totalOutput += content;
+                //         if (!finish_reason && content !== "") {
+                //             if (output.length >= 1950) {
+                //                 totalOutput += content;
+                //                 await msgRef?.edit(output);
+                //                 msgRef = await msg.reply(content);
+                //                 messages.push({
+                //                     role: "assistant",
+                //                     content: totalOutput,
+                //                 });
+                //                 output = content;
+                //                 tokensReceived = 0;
+                //             } else {
+                //                 output += content;
+                //             }
+                //             if (
+                //                 !haveSentMessage &&
+                //                 tokensReceived >= BEFORE_FIRST_POST
+                //             ) {
+                //                 msgRef = await msg.reply(output);
+                //                 haveSentMessage = true;
+                //                 tokensReceived = 0;
+                //             }
+                //             if (
+                //                 haveSentMessage &&
+                //                 tokensReceived >= BEFORE_EDIT
+                //             ) {
+                //                 msgRef?.edit(output);
+                //                 tokensReceived = 0;
+                //             }
+                //         }
+                //         tokensReceived++;
+                //     }
+                // }
 
                 async function outputDiscordMessage() {
                     if (msgRef) {
